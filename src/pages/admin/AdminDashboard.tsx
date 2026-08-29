@@ -3,13 +3,22 @@ import { Link } from 'react-router-dom';
 import { Palette, CheckCircle, Clock, ShoppingBag, DollarSign, Upload, ShieldAlert, LogOut } from 'lucide-react';
 import { artworkService } from '../../services/artworkService';
 import { SEO } from '../../components/layout/SEO';
+import { supabase } from '../../lib/supabaseClient';
 
 export const AdminDashboard: React.FC = () => {
   const [stats] = useState(() => artworkService.getDashboardStats());
 
-  const handleLogout = () => {
-    localStorage.removeItem('dhruvi_admin_token');
-    window.location.href = '/admin';
+  const handleLogout = async () => {
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.error('Error during sign out:', e);
+    } finally {
+      localStorage.removeItem('dhruvi_admin_token');
+      window.location.href = '/admin';
+    }
   };
 
   return (

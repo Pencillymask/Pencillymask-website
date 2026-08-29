@@ -141,8 +141,16 @@ export const csvImportService = {
   // Batch import valid rows into artwork storage
   commitValidRows(validResults: CsvImportRowResult[]) {
     let importedCount = 0;
+    const allCategories = artworkService.getCategories();
     validResults.forEach(res => {
       if (res.isValid && res.data) {
+        const catStr = (res.data.category || '').toLowerCase().trim();
+        const matchedCategory = allCategories.find(c =>
+          c.slug.toLowerCase() === catStr ||
+          c.name.toLowerCase() === catStr ||
+          c.id === res.data.category
+        );
+
         artworkService.saveArtwork({
           title: res.data.title,
           price: Number(res.data.price),
@@ -150,6 +158,9 @@ export const csvImportService = {
           width: Number(res.data.width),
           height: Number(res.data.height),
           year: Number(res.data.year),
+          categoryId: matchedCategory ? matchedCategory.id : undefined,
+          categoryName: matchedCategory?.name,
+          categorySlug: matchedCategory?.slug,
           description: res.data.description || `Original painting ${res.data.title} by Dhruvi.`,
           status: (res.data.status as any) || 'available',
         });

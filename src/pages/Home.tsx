@@ -295,7 +295,7 @@ export const Home: React.FC = () => {
             </motion.div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {categories.map((cat, idx) => {
+              {categories.filter(c => !c.parentId).map((cat, idx) => {
                 const catArts = artworkService.getArtworks({ categorySlug: cat.slug, limit: 1 }).artworks;
                 const catImage = catArts[0]?.images?.[0]?.storagePath || (idx === 0 ? '/hero-koi.jpg' : null);
 

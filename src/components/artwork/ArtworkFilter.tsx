@@ -92,47 +92,74 @@ export const ArtworkFilter: React.FC<ArtworkFilterProps> = ({
       </div>
 
       {/* Row 3: Category Pills */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs uppercase tracking-widest text-gallery-muted font-medium mr-2">
-          Category:
-        </span>
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs uppercase tracking-widest text-gallery-muted font-medium mr-2">
+            Collection:
+          </span>
 
-        <button
-          onClick={() => onFilterChange({ categorySlug: 'all', page: 1 })}
-          className={`px-3 py-1 rounded-md text-xs transition-all ${
-            !filters.categorySlug || filters.categorySlug === 'all'
-              ? 'bg-gallery-gold text-white font-medium'
-              : 'bg-white text-gallery-dark border border-gallery-border hover:border-gallery-gold'
-          }`}
-        >
-          All Categories
-        </button>
-
-        {categories.map((cat) => {
-          const isActive = filters.categorySlug === cat.slug;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => onFilterChange({ categorySlug: cat.slug, page: 1 })}
-              className={`px-3 py-1 rounded-md text-xs transition-all ${
-                isActive
-                  ? 'bg-gallery-gold text-white font-medium'
-                  : 'bg-white text-gallery-dark border border-gallery-border hover:border-gallery-gold'
-              }`}
-            >
-              {cat.name}
-            </button>
-          );
-        })}
-
-        {/* Reset Filters Button */}
-        {(filters.searchQuery || filters.categorySlug || (filters.status && filters.status !== 'all')) && (
           <button
-            onClick={onResetFilters}
-            className="ml-auto text-xs text-gallery-gold-dark hover:underline font-medium flex items-center gap-1"
+            onClick={() => onFilterChange({ categorySlug: 'all', page: 1 })}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              !filters.categorySlug || filters.categorySlug === 'all'
+                ? 'bg-gallery-gold text-white shadow-sm'
+                : 'bg-white text-gallery-dark border border-gallery-border hover:border-gallery-gold'
+            }`}
           >
-            <X className="w-3.5 h-3.5" /> Clear All Filters
+            All Collections
           </button>
+
+          {categories.filter(c => !c.parentId).map((cat) => {
+            const isActive = filters.categorySlug === cat.slug;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => onFilterChange({ categorySlug: cat.slug, page: 1 })}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-gallery-gold text-white shadow-sm'
+                    : 'bg-white text-gallery-dark border border-gallery-border hover:border-gallery-gold'
+                }`}
+              >
+                {cat.name}
+              </button>
+            );
+          })}
+
+          {/* Reset Filters Button */}
+          {(filters.searchQuery || (filters.categorySlug && filters.categorySlug !== 'all') || (filters.status && filters.status !== 'all')) && (
+            <button
+              onClick={onResetFilters}
+              className="ml-auto text-xs text-gallery-gold-dark hover:underline font-medium flex items-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" /> Clear Filters
+            </button>
+          )}
+        </div>
+
+        {/* Optional Subcategories Bar if any exist */}
+        {categories.some(c => Boolean(c.parentId)) && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 pl-1">
+            <span className="text-[11px] uppercase tracking-wider text-gallery-muted/80 font-medium mr-1.5">
+              Sub-Themes:
+            </span>
+            {categories.filter(c => Boolean(c.parentId)).map((sub) => {
+              const isActive = filters.categorySlug === sub.slug;
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => onFilterChange({ categorySlug: sub.slug, page: 1 })}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                    isActive
+                      ? 'bg-gallery-dark text-white shadow-xs'
+                      : 'bg-white/80 text-gallery-dark/80 hover:bg-gallery-gold/20 border border-gallery-border'
+                  }`}
+                >
+                  {sub.name}
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

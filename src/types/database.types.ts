@@ -3,7 +3,7 @@ export type ArtworkStatus = 'draft' | 'available' | 'reserved' | 'sold' | 'archi
 export type ImageType = 'primary' | 'angled' | 'detail' | 'room' | 'wide_angle' | 'back';
 
 export interface ArtworkImage {
-  id: string;
+  id?: string;
   artworkId?: string;
   storagePath: string;
   imageType: ImageType;

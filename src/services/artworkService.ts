@@ -4,8 +4,14 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 const LOCAL_STORAGE_KEY = 'dhruvi_portfolio_artworks';
 
+let inMemoryArtworks: Artwork[] | null = null;
+let inMemoryCategories: Category[] | null = null;
+
 // Initialize local storage cache from generated JSON if empty
 function getLocalArtworks(): Artwork[] {
+  if (inMemoryArtworks !== null) {
+    return inMemoryArtworks;
+  }
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -18,6 +24,7 @@ function getLocalArtworks(): Artwork[] {
         if (cleaned.length !== parsed.length) {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleaned));
         }
+        inMemoryArtworks = cleaned;
         return cleaned;
       }
     }
@@ -25,12 +32,15 @@ function getLocalArtworks(): Artwork[] {
     console.error('Failed reading artworks from local storage cache', e);
   }
   // Fallback to static generated list
-  return (mockArtworksData as Artwork[]).filter(a =>
+  const fallback = (mockArtworksData as Artwork[]).filter(a =>
     !a.images || !a.images.some(img => img.storagePath?.includes('unsplash.com'))
   );
+  inMemoryArtworks = [...fallback];
+  return inMemoryArtworks;
 }
 
 function saveLocalArtworks(artworks: Artwork[]): void {
+  inMemoryArtworks = [...artworks];
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
@@ -70,13 +80,19 @@ export interface ArtworkFilterOptions {
 const LOCAL_CATEGORIES_KEY = 'dhruvi_portfolio_categories';
 
 function getLocalCategories(): Category[] {
+  if (inMemoryCategories !== null) {
+    return inMemoryCategories;
+  }
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const cached = localStorage.getItem(LOCAL_CATEGORIES_KEY);
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        inMemoryCategories = JSON.parse(cached);
+        return inMemoryCategories!;
+      }
     }
   } catch (e) { }
-  return [
+  inMemoryCategories = [
     { id: 'c1000000-0000-0000-0000-000000000001', name: 'Oil on Canvas', slug: 'oil-on-canvas', description: 'Luminous layers of fine oil paint on heavy Belgian linen canvas.' },
     { id: 'c1000000-0000-0000-0000-000000000002', name: 'Acrylic & Mixed Media', slug: 'acrylic-mixed-media', description: 'Dynamic textured acrylics with gold leaf and archival pigments.' },
     { id: 'c1000000-0000-0000-0000-000000000003', name: 'Abstract Impressions', slug: 'abstract-impressions', description: 'Emotional color landscapes exploring light, silence, and resonance.' },
@@ -85,9 +101,11 @@ function getLocalCategories(): Category[] {
     { id: 'b1000000-0000-0000-0000-000000000002', parentId: 'c1000000-0000-0000-0000-000000000001', name: 'Coastal & Seascapes', slug: 'coastal-seascapes', description: 'Muted indigo and alabaster morning landscapes.' },
     { id: 'b1000000-0000-0000-0000-000000000003', parentId: 'c1000000-0000-0000-0000-000000000002', name: 'Marble Dust Mixed Media', slug: 'marble-dust-mixed-media', description: 'Tactile marble dust texture with bronze metallic pigments.' },
   ];
+  return inMemoryCategories;
 }
 
 function saveLocalCategories(categories: Category[]): void {
+  inMemoryCategories = [...categories];
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.setItem(LOCAL_CATEGORIES_KEY, JSON.stringify(categories));
@@ -95,27 +113,107 @@ function saveLocalCategories(categories: Category[]): void {
   } catch (e) { }
 }
 
+function isUUID(str?: string | null): boolean {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+function generateFallbackUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export const artworkService = {
+  isUUID(str?: string | null): boolean {
+    return isUUID(str);
+  },
+
   // Get Categories & Subcategories
   getCategories(): Category[] {
     return getLocalCategories();
   },
 
-  // Save Category / Subcategory
+  // Save Category / Subcategory - lets PostgreSQL generate the UUID if new
   async saveCategoryAsync(categoryData: Partial<Category>): Promise<Category> {
     const categories = getLocalCategories();
-    const slug = categoryData.slug || categoryData.name!.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const existingIdx = categories.findIndex(c => c.id === categoryData.id || c.slug === slug);
-    const isUUID = categoryData.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryData.id);
-    const id = isUUID ? categoryData.id! : 'c' + Date.now().toString(16).padStart(31, '0').slice(0, 31);
+    const slug = categoryData.slug || categoryData.name!.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const existingIdx = categories.findIndex(c => (categoryData.id && c.id === categoryData.id) || c.slug === slug);
+    const hasValidId = Boolean(categoryData.id && isUUID(categoryData.id));
 
-    const fullCat: Category = {
-      id,
+    let finalId = hasValidId 
+      ? categoryData.id! 
+      : (existingIdx >= 0 && isUUID(categories[existingIdx].id) ? categories[existingIdx].id : generateFallbackUUID());
+
+    let fullCat: Category = {
+      id: finalId,
       name: categoryData.name!,
       slug,
       description: categoryData.description || '',
-      parentId: categoryData.parentId || null,
+      parentId: categoryData.parentId && isUUID(categoryData.parentId) ? categoryData.parentId : null,
+      sortOrder: categoryData.sortOrder || (existingIdx >= 0 ? categories[existingIdx].sortOrder : categories.length + 1),
     };
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        if (hasValidId) {
+          // Update existing category with known UUID
+          const { data, error } = await supabase
+            .from('categories')
+            .upsert({
+              id: fullCat.id,
+              parent_id: fullCat.parentId || null,
+              name: fullCat.name,
+              slug: fullCat.slug,
+              description: fullCat.description,
+              sort_order: fullCat.sortOrder || 0,
+            }, { onConflict: 'id' })
+            .select()
+            .single();
+
+          if (!error && data) {
+            fullCat.id = data.id;
+          } else if (error) {
+            console.error('Supabase Category Update Error:', error.message);
+          }
+        } else {
+          // Let PostgreSQL generate the UUID id with default uuid_generate_v4()
+          const { data, error } = await supabase
+            .from('categories')
+            .insert({
+              parent_id: fullCat.parentId || null,
+              name: fullCat.name,
+              slug: fullCat.slug,
+              description: fullCat.description,
+              sort_order: fullCat.sortOrder || 0,
+            })
+            .select()
+            .single();
+
+          if (!error && data) {
+            fullCat.id = data.id;
+          } else if (error) {
+            console.warn('Supabase Category Insert notice (checking by slug):', error.message);
+            // If conflict by slug, try fetching existing row ID
+            const { data: existingRow } = await supabase
+              .from('categories')
+              .select('id')
+              .eq('slug', fullCat.slug)
+              .single();
+            if (existingRow) {
+              fullCat.id = existingRow.id;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Supabase Category Upsert Exception:', err);
+      }
+    }
 
     if (existingIdx >= 0) {
       categories[existingIdx] = fullCat;
@@ -124,18 +222,8 @@ export const artworkService = {
     }
     saveLocalCategories(categories);
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        await supabase.from('categories').upsert({
-          id: fullCat.id,
-          parent_id: fullCat.parentId || null,
-          name: fullCat.name,
-          slug: fullCat.slug,
-          description: fullCat.description,
-        });
-      } catch (err) {
-        console.error('Supabase Category Upsert Error:', err);
-      }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('dhruvi_artworks_updated', { detail: { categories } }));
     }
     return fullCat;
   },
@@ -145,12 +233,16 @@ export const artworkService = {
     categories = categories.filter(c => c.id !== id && c.parentId !== id);
     saveLocalCategories(categories);
 
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
       try {
         await supabase.from('categories').delete().eq('id', id);
       } catch (err) {
         console.error('Supabase Category Delete Error:', err);
       }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('dhruvi_artworks_updated', { detail: { categories } }));
     }
   },
 
@@ -169,19 +261,36 @@ export const artworkService = {
 
       let categories: Category[] = getLocalCategories();
       if (!catErr && catData && catData.length > 0) {
-        categories = catData.map((c: any) => ({
-          id: c.id,
-          parentId: c.parent_id,
-          name: c.name,
-          slug: c.slug,
-          description: c.description || '',
-          sortOrder: c.sort_order || 0,
-        }));
+        const dbCatMap = new Map<string, Category>();
+        catData.forEach((c: any) => {
+          dbCatMap.set(c.id, {
+            id: c.id,
+            parentId: c.parent_id || null,
+            name: c.name,
+            slug: c.slug,
+            description: c.description || '',
+            sortOrder: c.sort_order || 0,
+          });
+        });
+
+        // Merge DB categories with default local categories to ensure none are lost
+        const mergedCategories: Category[] = [];
+        dbCatMap.forEach(cat => mergedCategories.push(cat));
+        categories.forEach(localCat => {
+          if (!mergedCategories.some(c => c.id === localCat.id || c.slug === localCat.slug)) {
+            mergedCategories.push(localCat);
+          }
+        });
+        categories = mergedCategories;
         saveLocalCategories(categories);
       }
 
       const catMap = new Map<string, Category>();
-      categories.forEach(c => catMap.set(c.id, c));
+      const slugMap = new Map<string, Category>();
+      categories.forEach(c => {
+        catMap.set(c.id, c);
+        slugMap.set(c.slug, c);
+      });
 
       // 2. Fetch Artworks with Images from Supabase
       const { data: artData, error: artErr } = await supabase
@@ -198,9 +307,22 @@ export const artworkService = {
       }
 
       if (artData && artData.length > 0) {
+        const localList = getLocalArtworks();
         const liveArtworks: Artwork[] = artData.map((row: any) => {
-          const catObj = row.category_id ? catMap.get(row.category_id) : undefined;
-          const subCatObj = row.sub_category_id ? catMap.get(row.sub_category_id) : undefined;
+          let catObj = row.category_id ? catMap.get(row.category_id) : undefined;
+          let subCatObj = row.sub_category_id ? catMap.get(row.sub_category_id) : undefined;
+
+          // If not linked by ID, search by local cache match or slug
+          const existingLocal = localList.find(a => a.id === row.id || a.slug === row.slug);
+          if (!catObj && existingLocal) {
+            catObj = catMap.get(existingLocal.categoryId) || slugMap.get(existingLocal.categorySlug || '');
+          }
+          if (!subCatObj && existingLocal && existingLocal.subCategoryId) {
+            subCatObj = catMap.get(existingLocal.subCategoryId) || (existingLocal.subCategorySlug ? slugMap.get(existingLocal.subCategorySlug) : undefined);
+          }
+
+          const fallbackCat = categories[0] || { id: 'c1000000-0000-0000-0000-000000000001', name: 'Oil on Canvas', slug: 'oil-on-canvas' };
+          const resolvedCat = catObj || fallbackCat;
 
           const images = (row.images || [])
             .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
@@ -227,10 +349,10 @@ export const artworkService = {
             height: Number(row.height) || 48,
             depth: Number(row.depth) || 1.5,
             year: Number(row.year) || new Date().getFullYear(),
-            categoryId: row.category_id || (catObj ? catObj.id : 'c1000000-0000-0000-0000-000000000001'),
-            categoryName: catObj ? catObj.name : 'Oil on Canvas',
-            categorySlug: catObj ? catObj.slug : 'oil-on-canvas',
-            subCategoryId: row.sub_category_id || null,
+            categoryId: row.category_id || resolvedCat.id,
+            categoryName: resolvedCat.name,
+            categorySlug: resolvedCat.slug,
+            subCategoryId: row.sub_category_id || subCatObj?.id || null,
             subCategoryName: subCatObj?.name,
             subCategorySlug: subCatObj?.slug,
             status: row.status || 'available',
@@ -265,7 +387,6 @@ export const artworkService = {
       // If Supabase table exists but is empty, seed mock items automatically
       const local = getLocalArtworks();
       if (local && local.length > 0) {
-        // Sync local items to Supabase in background
         Promise.all(local.map(a => this.syncArtworkToSupabase(a))).catch(e => console.warn('Auto-seed error:', e));
       }
 
@@ -280,9 +401,39 @@ export const artworkService = {
   getArtworks(options: ArtworkFilterOptions = {}) {
     let artworks = getLocalArtworks();
 
-    // Filter by Category
+    // Filter by Category or Subcategory
     if (options.categorySlug && options.categorySlug !== 'all') {
-      artworks = artworks.filter(a => a.categorySlug === options.categorySlug);
+      const targetSlug = options.categorySlug.toLowerCase().trim();
+      const allCats = getLocalCategories();
+      const matchedCat = allCats.find(c => c.slug.toLowerCase() === targetSlug);
+      
+      // If this is a parent category, also match its subcategory IDs and slugs
+      const childCategoryIds = matchedCat
+        ? allCats.filter(c => c.parentId === matchedCat.id).map(c => c.id)
+        : [];
+      const childCategorySlugs = matchedCat
+        ? allCats.filter(c => c.parentId === matchedCat.id).map(c => c.slug.toLowerCase())
+        : [];
+
+      artworks = artworks.filter(a => {
+        const artCatSlug = (a.categorySlug || '').toLowerCase().trim();
+        const artSubCatSlug = (a.subCategorySlug || '').toLowerCase().trim();
+        const artCatId = a.categoryId;
+        const artSubCatId = a.subCategoryId;
+
+        return (
+          artCatSlug === targetSlug ||
+          artSubCatSlug === targetSlug ||
+          childCategorySlugs.includes(artCatSlug) ||
+          childCategorySlugs.includes(artSubCatSlug) ||
+          (matchedCat && (
+            artCatId === matchedCat.id ||
+            artSubCatId === matchedCat.id ||
+            childCategoryIds.includes(artCatId) ||
+            (artSubCatId && childCategoryIds.includes(artSubCatId))
+          ))
+        );
+      });
     }
 
     // Filter by Availability Status
@@ -314,7 +465,9 @@ export const artworkService = {
       artworks = artworks.filter(a =>
         a.title.toLowerCase().includes(q) ||
         a.description.toLowerCase().includes(q) ||
-        a.medium.toLowerCase().includes(q)
+        a.medium.toLowerCase().includes(q) ||
+        (a.categoryName && a.categoryName.toLowerCase().includes(q)) ||
+        (a.subCategoryName && a.subCategoryName.toLowerCase().includes(q))
       );
     }
 
@@ -356,8 +509,12 @@ export const artworkService = {
   // Get Related Artworks
   getRelatedArtworks(currentId: string, categorySlug: string, limit = 3): Artwork[] {
     const artworks = getLocalArtworks();
+    const targetSlug = (categorySlug || '').toLowerCase();
     return artworks
-      .filter(a => a.id !== currentId && a.categorySlug === categorySlug)
+      .filter(a => a.id !== currentId && (
+        (a.categorySlug || '').toLowerCase() === targetSlug ||
+        (a.subCategorySlug || '').toLowerCase() === targetSlug
+      ))
       .slice(0, limit);
   },
 
@@ -386,16 +543,15 @@ export const artworkService = {
   // Admin: Save / Create Artwork (Synchronous + Async Supabase sync)
   saveArtwork(newArtworkData: Partial<Artwork>): Artwork {
     const artworks = getLocalArtworks();
+    const allCategories = getLocalCategories();
     const isEditing = Boolean(newArtworkData.id);
     const existingIndex = isEditing ? artworks.findIndex(a => a.id === newArtworkData.id) : -1;
     const existingArt = existingIndex >= 0 ? artworks[existingIndex] : null;
 
-    // Use exact existing ID if editing, otherwise generate a clean UUID or ID
-    const artworkId = newArtworkData.id || (
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : 'a' + Date.now().toString(16).padStart(31, '0').slice(0, 31)
-    );
+    // Use existing ID if valid UUID, otherwise generate fallback for local cache
+    const artworkId = (newArtworkData.id && isUUID(newArtworkData.id))
+      ? newArtworkData.id
+      : (existingArt && isUUID(existingArt.id) ? existingArt.id : generateFallbackUUID());
 
     // Compute or preserve unique slug
     let slug = existingArt?.slug;
@@ -413,6 +569,23 @@ export const artworkService = {
       }
     }
 
+    // Resolve Category metadata accurately
+    let catObj = newArtworkData.categoryId ? allCategories.find(c => c.id === newArtworkData.categoryId) : undefined;
+    if (!catObj && newArtworkData.categorySlug) {
+      catObj = allCategories.find(c => c.slug.toLowerCase() === newArtworkData.categorySlug!.toLowerCase());
+    }
+    if (!catObj && existingArt) {
+      catObj = allCategories.find(c => c.id === existingArt.categoryId || c.slug === existingArt.categorySlug);
+    }
+    const defaultCat = allCategories[0] || { id: 'c1000000-0000-0000-0000-000000000001', name: 'Oil on Canvas', slug: 'oil-on-canvas' };
+    const finalCat = catObj || defaultCat;
+
+    // Resolve Subcategory metadata
+    let subCatObj = newArtworkData.subCategoryId ? allCategories.find(c => c.id === newArtworkData.subCategoryId) : undefined;
+    if (!subCatObj && newArtworkData.subCategorySlug) {
+      subCatObj = allCategories.find(c => c.slug.toLowerCase() === newArtworkData.subCategorySlug!.toLowerCase());
+    }
+
     const fullArtwork: Artwork = {
       id: artworkId,
       title: newArtworkData.title || existingArt?.title || 'Untitled Artwork',
@@ -425,12 +598,12 @@ export const artworkService = {
       height: newArtworkData.height !== undefined ? Number(newArtworkData.height) : (existingArt?.height || 48),
       depth: newArtworkData.depth !== undefined ? Number(newArtworkData.depth) : (existingArt?.depth || 1.5),
       year: newArtworkData.year !== undefined ? Number(newArtworkData.year) : (existingArt?.year || new Date().getFullYear()),
-      categoryId: newArtworkData.categoryId || existingArt?.categoryId || 'c1000000-0000-0000-0000-000000000001',
-      categoryName: newArtworkData.categoryName || existingArt?.categoryName || 'Oil on Canvas',
-      categorySlug: newArtworkData.categorySlug || existingArt?.categorySlug || 'oil-on-canvas',
-      subCategoryId: newArtworkData.subCategoryId !== undefined ? newArtworkData.subCategoryId : (existingArt?.subCategoryId || null),
-      subCategoryName: newArtworkData.subCategoryName || existingArt?.subCategoryName || undefined,
-      subCategorySlug: newArtworkData.subCategorySlug || existingArt?.subCategorySlug || undefined,
+      categoryId: finalCat.id,
+      categoryName: finalCat.name,
+      categorySlug: finalCat.slug,
+      subCategoryId: subCatObj ? subCatObj.id : (newArtworkData.subCategoryId || null),
+      subCategoryName: subCatObj?.name,
+      subCategorySlug: subCatObj?.slug,
       status: newArtworkData.status || existingArt?.status || 'available',
       featured: newArtworkData.featured !== undefined ? Boolean(newArtworkData.featured) : (existingArt?.featured || false),
       signed: true,
@@ -439,7 +612,7 @@ export const artworkService = {
       frameIncluded: newArtworkData.frameIncluded !== undefined ? Boolean(newArtworkData.frameIncluded) : (existingArt?.frameIncluded || false),
       images: newArtworkData.images && newArtworkData.images.length > 0 ? newArtworkData.images : (existingArt?.images || [
         {
-          id: `img-${Date.now()}`,
+          id: generateFallbackUUID(),
           storagePath: '/hero-koi.jpg',
           imageType: 'primary',
           altText: newArtworkData.title || 'Artwork Front View',
@@ -460,49 +633,112 @@ export const artworkService = {
     return fullArtwork;
   },
 
-  // Supabase Async Upsert helper
-  async syncArtworkToSupabase(artwork: Artwork) {
-    if (!isSupabaseConfigured || !supabase) return;
+  // Supabase Async Upsert helper - lets PostgreSQL generate the UUID if new
+  async syncArtworkToSupabase(artwork: Artwork): Promise<Artwork> {
+    if (!isSupabaseConfigured || !supabase) return artwork;
 
     try {
-      const buildUpsertPayload = {
-        id: artwork.id,
+      const allCats = getLocalCategories();
+
+      // 1. Ensure category and subcategory exist in Supabase first to prevent FK constraint failures
+      if (artwork.categoryId && isUUID(artwork.categoryId)) {
+        const cat = allCats.find(c => c.id === artwork.categoryId);
+        if (cat) {
+          await supabase.from('categories').upsert({
+            id: cat.id,
+            parent_id: cat.parentId && isUUID(cat.parentId) ? cat.parentId : null,
+            name: cat.name,
+            slug: cat.slug,
+            description: cat.description || '',
+            sort_order: cat.sortOrder || 0,
+          }, { onConflict: 'id' });
+        }
+      }
+
+      if (artwork.subCategoryId && isUUID(artwork.subCategoryId)) {
+        const subCat = allCats.find(c => c.id === artwork.subCategoryId);
+        if (subCat) {
+          await supabase.from('categories').upsert({
+            id: subCat.id,
+            parent_id: subCat.parentId && isUUID(subCat.parentId) ? subCat.parentId : null,
+            name: subCat.name,
+            slug: subCat.slug,
+            description: subCat.description || '',
+            sort_order: subCat.sortOrder || 0,
+          }, { onConflict: 'id' });
+        }
+      }
+
+      const hasValidUUID = isUUID(artwork.id);
+      let dbArtworkId = artwork.id;
+
+      const basePayload = {
         title: artwork.title,
         slug: artwork.slug,
         description: artwork.description,
         price: artwork.price,
-        currency: artwork.currency,
+        currency: artwork.currency || 'INR',
         medium: artwork.medium,
         width: artwork.width,
         height: artwork.height,
-        depth: artwork.depth,
+        depth: artwork.depth || 1.5,
         year: artwork.year,
-        category_id: artwork.categoryId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(artwork.categoryId) ? artwork.categoryId : null,
-        sub_category_id: artwork.subCategoryId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(artwork.subCategoryId) ? artwork.subCategoryId : null,
-        status: artwork.status,
-        featured: artwork.featured,
-        signed: artwork.signed,
-        certificate_available: artwork.certificateAvailable,
-        frame_type: artwork.frameType,
-        frame_included: artwork.frameIncluded,
+        category_id: artwork.categoryId && isUUID(artwork.categoryId) ? artwork.categoryId : null,
+        sub_category_id: artwork.subCategoryId && isUUID(artwork.subCategoryId) ? artwork.subCategoryId : null,
+        status: artwork.status || 'available',
+        featured: Boolean(artwork.featured),
+        signed: Boolean(artwork.signed ?? true),
+        certificate_available: Boolean(artwork.certificateAvailable ?? true),
+        frame_type: artwork.frameType || 'Unframed Gallery Canvas',
+        frame_included: Boolean(artwork.frameIncluded),
         created_at: artwork.createdAt || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
-      const { error: artworkError } = await supabase
-        .from('artworks')
-        .upsert(buildUpsertPayload, { onConflict: 'id' });
+      if (hasValidUUID) {
+        // Update existing with known UUID
+        const { data, error: artworkError } = await supabase
+          .from('artworks')
+          .upsert({ id: artwork.id, ...basePayload }, { onConflict: 'id' })
+          .select()
+          .single();
 
-      if (artworkError) {
-        console.error('Error updating artwork in Supabase:', artworkError.message);
-        return;
+        if (artworkError) {
+          console.error('Error updating artwork in Supabase:', artworkError.message);
+        } else if (data) {
+          dbArtworkId = data.id;
+        }
+      } else {
+        // Let PostgreSQL generate the UUID with DEFAULT uuid_generate_v4()
+        const { data, error: artworkError } = await supabase
+          .from('artworks')
+          .insert(basePayload)
+          .select()
+          .single();
+
+        if (artworkError) {
+          console.error('Error inserting artwork in Supabase:', artworkError.message);
+        } else if (data) {
+          dbArtworkId = data.id;
+        }
       }
 
-      // Populate artwork_categories junction table safely
+      // Update local artwork with Postgres-assigned UUID
+      if (dbArtworkId !== artwork.id) {
+        artwork.id = dbArtworkId;
+        const localArts = getLocalArtworks();
+        const idx = localArts.findIndex(a => a.slug === artwork.slug || a.id === artwork.id);
+        if (idx >= 0) {
+          localArts[idx].id = dbArtworkId;
+          saveLocalArtworks(localArts);
+        }
+      }
+
+      // 2. Populate artwork_categories junction table
       try {
-        if (artwork.categoryId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(artwork.categoryId)) {
+        if (artwork.categoryId && isUUID(artwork.categoryId)) {
           await supabase.from('artwork_categories').upsert({
-            artwork_id: artwork.id,
+            artwork_id: dbArtworkId,
             category_id: artwork.categoryId,
           }, { onConflict: 'artwork_id,category_id' });
         }
@@ -510,41 +746,45 @@ export const artworkService = {
         console.warn('artwork_categories sync notice:', junctionErr);
       }
 
+      // 3. Sync artwork images
       if (artwork.images && artwork.images.length > 0) {
-        // Delete existing images for this artwork to prevent duplicates upon update
-        await supabase.from('artwork_images').delete().eq('artwork_id', artwork.id);
+        await supabase.from('artwork_images').delete().eq('artwork_id', dbArtworkId);
 
         for (let idx = 0; idx < artwork.images.length; idx++) {
           const img = artwork.images[idx];
-          const isUUID = img.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(img.id);
-
-          const imgUUID = isUUID
-            ? img.id
-            : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `f0000000-0000-0000-0000-${artwork.id.replace(/[^0-9a-f]/gi, '').slice(-10)}${String(idx + 1).padStart(2, '0')}`);
-
-          await supabase.from('artwork_images').upsert({
-            id: imgUUID,
-            artwork_id: artwork.id,
+          // Let PostgreSQL generate ID or use existing UUID
+          const imgPayload: any = {
+            artwork_id: dbArtworkId,
             storage_path: img.storagePath,
             image_type: img.imageType || 'primary',
             alt_text: img.altText || artwork.title,
             sort_order: img.sortOrder || (idx + 1),
             created_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
+          };
+          if (img.id && isUUID(img.id)) {
+            imgPayload.id = img.id;
+          }
+
+          await supabase.from('artwork_images').insert(imgPayload);
         }
       }
     } catch (err) {
       console.error('Unexpected Supabase upsert exception:', err);
     }
+    return artwork;
   },
 
   // Async Save Artwork method for explicit await
   async saveArtworkAsync(newArtworkData: Partial<Artwork>): Promise<Artwork> {
     const artwork = this.saveArtwork(newArtworkData);
+    let synced = artwork;
     if (isSupabaseConfigured && supabase) {
-      await this.syncArtworkToSupabase(artwork);
+      synced = await this.syncArtworkToSupabase(artwork);
     }
-    return artwork;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('dhruvi_artworks_updated', { detail: { artwork: synced } }));
+    }
+    return synced;
   },
 
   // Admin: Update Status (e.g. mark sold / available)
@@ -556,7 +796,7 @@ export const artworkService = {
       artwork.updatedAt = new Date().toISOString();
       saveLocalArtworks(artworks);
 
-      if (isSupabaseConfigured && supabase) {
+      if (isSupabaseConfigured && supabase && isUUID(id)) {
         supabase
           .from('artworks')
           .update({ status, updated_at: new Date().toISOString() })
@@ -564,6 +804,9 @@ export const artworkService = {
           .then(({ error }) => {
             if (error) console.error('Error updating artwork status in Supabase:', error.message);
           });
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('dhruvi_artworks_updated', { detail: { id, status } }));
       }
     }
     return artwork;
@@ -575,7 +818,7 @@ export const artworkService = {
     artworks = artworks.filter(a => a.id !== id);
     saveLocalArtworks(artworks);
 
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
       supabase
         .from('artworks')
         .delete()
@@ -583,6 +826,9 @@ export const artworkService = {
         .then(({ error }) => {
           if (error) console.error('Error deleting artwork from Supabase:', error.message);
         });
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('dhruvi_artworks_updated', { detail: { id } }));
     }
   },
 

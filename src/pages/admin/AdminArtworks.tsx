@@ -13,6 +13,7 @@ import {
   DEFAULT_CHATGPT_CONVERSATION_URL,
 } from '../../utils/chatGptHelper';
 import { SEO } from '../../components/layout/SEO';
+import { useArtworksSync } from '../../utils/useArtworksSync';
 
 interface ImageRowState {
   id?: string;
@@ -21,6 +22,7 @@ interface ImageRowState {
 }
 
 export const AdminArtworks: React.FC = () => {
+  useArtworksSync();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ArtworkStatus>('all');
   const [page, setPage] = useState(1);
@@ -54,6 +56,15 @@ export const AdminArtworks: React.FC = () => {
   const refreshCategories = () => {
     setAllCategories(artworkService.getCategories());
   };
+
+  React.useEffect(() => {
+    refreshCategories();
+    const handleUpdate = () => {
+      refreshCategories();
+    };
+    window.addEventListener('dhruvi_artworks_updated', handleUpdate);
+    return () => window.removeEventListener('dhruvi_artworks_updated', handleUpdate);
+  }, []);
 
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -369,7 +380,7 @@ export const AdminArtworks: React.FC = () => {
       const validImages = imageRows
         .filter(row => row.url.trim() !== '')
         .map((row, idx) => ({
-          id: row.id || `f${(Date.now() + idx).toString(16).padStart(31, '0').slice(0, 31)}`,
+          id: (row.id && artworkService.isUUID(row.id)) ? row.id : undefined,
           storagePath: row.url.trim(),
           imageType: row.type,
           altText: formData.title,
@@ -378,7 +389,6 @@ export const AdminArtworks: React.FC = () => {
 
       const finalImages = validImages.length > 0 ? validImages : [
         {
-          id: `f${Date.now().toString(16).padStart(31, '0').slice(0, 31)}`,
           storagePath: '/hero-koi.jpg',
           imageType: 'primary' as ImageType,
           altText: formData.title,
