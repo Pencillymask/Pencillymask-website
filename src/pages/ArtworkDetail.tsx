@@ -7,7 +7,8 @@ import {
   Award,
   ShieldCheck,
   Share2,
-  ChevronLeft
+  ChevronLeft,
+  Sparkles
 } from 'lucide-react';
 import { artworkService } from '../services/artworkService';
 import { whatsappService } from '../services/whatsappService';
@@ -71,7 +72,7 @@ export const ArtworkDetail: React.FC = () => {
         title: artwork.title,
         text: `Original Painting "${artwork.title}" by Dhruvi`,
         url: window.location.href,
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       navigator.clipboard.writeText(window.location.href);
       setCopiedLink(true);
@@ -113,7 +114,7 @@ export const ArtworkDetail: React.FC = () => {
         keywords={`${artwork.title}, ${artwork.medium}, original painting, Dhruvi art, ${artwork.categoryName || 'fine art'}, 1-of-1 painting`}
         schema={artworkSchema}
       />
-      
+
       {/* Back Link */}
       <button
         onClick={() => navigate(-1)}
@@ -124,10 +125,10 @@ export const ArtworkDetail: React.FC = () => {
 
       {/* Main 2-Column Desktop / Stacked Mobile Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-        
+
         {/* Left Column: Multi-Angle Gallery & Zoom Lightbox Trigger (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
-          
+
           {/* Featured Large Image Display */}
           <div className="relative aspect-[4/5] bg-gallery-card/40 rounded-xl overflow-hidden border border-gallery-border/70 group shadow-gallery">
             <img
@@ -164,9 +165,8 @@ export const ArtworkDetail: React.FC = () => {
                 <button
                   key={img.id || idx}
                   onClick={() => setSelectedImageIndex(idx)}
-                  className={`relative w-20 h-24 rounded-md overflow-hidden border-2 transition-all flex-shrink-0 ${
-                    selectedImageIndex === idx ? 'border-gallery-gold scale-105 shadow-md' : 'border-gallery-border opacity-70 hover:opacity-100'
-                  }`}
+                  className={`relative w-20 h-24 rounded-md overflow-hidden border-2 transition-all flex-shrink-0 ${selectedImageIndex === idx ? 'border-gallery-gold scale-105 shadow-md' : 'border-gallery-border opacity-70 hover:opacity-100'
+                    }`}
                 >
                   <img src={img.storagePath} alt={img.altText} className="w-full h-full object-cover" />
                   <span className="absolute bottom-0 inset-x-0 bg-gallery-dark/70 text-white text-[9px] uppercase tracking-tighter text-center py-0.5">
@@ -180,7 +180,7 @@ export const ArtworkDetail: React.FC = () => {
 
         {/* Right Column: Information, Provenance, & Inquiry Actions (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          
+
           <div className="space-y-2 border-b border-gallery-border pb-6">
             <span className="text-xs uppercase tracking-[0.2em] text-gallery-gold font-bold">
               {artwork.categoryName || 'Oil on Canvas'}
@@ -221,11 +221,10 @@ export const ArtworkDetail: React.FC = () => {
                 <button
                   onClick={() => addToCart(artwork)}
                   disabled={inCart}
-                  className={`w-full py-3.5 px-4 rounded font-medium text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 ${
-                    inCart
+                  className={`w-full py-3.5 px-4 rounded font-medium text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 ${inCart
                       ? 'bg-gallery-border text-gallery-muted cursor-default'
                       : 'bg-gallery-dark text-white hover:bg-gallery-gold'
-                  }`}
+                    }`}
                 >
                   <ShoppingBag className="w-4 h-4" />
                   <span>{inCart ? 'Added to Inquiry List' : 'Add to Inquiry List'}</span>
