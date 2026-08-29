@@ -154,6 +154,128 @@ export const artworkService = {
     }
   },
 
+  // Fetch Live Artworks & Categories directly from Supabase
+  async fetchLiveArtworksAsync(): Promise<{ artworks: Artwork[]; categories: Category[] }> {
+    if (!isSupabaseConfigured || !supabase) {
+      return { artworks: getLocalArtworks(), categories: getLocalCategories() };
+    }
+
+    try {
+      // 1. Fetch Categories from Supabase
+      const { data: catData, error: catErr } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      let categories: Category[] = getLocalCategories();
+      if (!catErr && catData && catData.length > 0) {
+        categories = catData.map((c: any) => ({
+          id: c.id,
+          parentId: c.parent_id,
+          name: c.name,
+          slug: c.slug,
+          description: c.description || '',
+          sortOrder: c.sort_order || 0,
+        }));
+        saveLocalCategories(categories);
+      }
+
+      const catMap = new Map<string, Category>();
+      categories.forEach(c => catMap.set(c.id, c));
+
+      // 2. Fetch Artworks with Images from Supabase
+      const { data: artData, error: artErr } = await supabase
+        .from('artworks')
+        .select(`
+          *,
+          images:artwork_images(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (artErr) {
+        console.warn('Supabase fetch artworks notice:', artErr.message);
+        return { artworks: getLocalArtworks(), categories };
+      }
+
+      if (artData && artData.length > 0) {
+        const liveArtworks: Artwork[] = artData.map((row: any) => {
+          const catObj = row.category_id ? catMap.get(row.category_id) : undefined;
+          const subCatObj = row.sub_category_id ? catMap.get(row.sub_category_id) : undefined;
+
+          const images = (row.images || [])
+            .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+            .map((img: any) => ({
+              id: img.id,
+              artworkId: img.artwork_id,
+              storagePath: img.storage_path || '/hero-koi.jpg',
+              imageType: img.image_type || 'primary',
+              altText: img.alt_text || row.title,
+              sortOrder: img.sort_order || 1,
+              createdAt: img.created_at,
+            }));
+
+          return {
+            id: row.id,
+            artistId: row.artist_id,
+            title: row.title,
+            slug: row.slug,
+            description: row.description || '',
+            price: Number(row.price) || 0,
+            currency: row.currency || 'INR',
+            medium: row.medium || 'Oil on Canvas',
+            width: Number(row.width) || 36,
+            height: Number(row.height) || 48,
+            depth: Number(row.depth) || 1.5,
+            year: Number(row.year) || new Date().getFullYear(),
+            categoryId: row.category_id || (catObj ? catObj.id : 'c1000000-0000-0000-0000-000000000001'),
+            categoryName: catObj ? catObj.name : 'Oil on Canvas',
+            categorySlug: catObj ? catObj.slug : 'oil-on-canvas',
+            subCategoryId: row.sub_category_id || null,
+            subCategoryName: subCatObj?.name,
+            subCategorySlug: subCatObj?.slug,
+            status: row.status || 'available',
+            reservationExpiresAt: row.reservation_expires_at,
+            featured: Boolean(row.featured),
+            signed: Boolean(row.signed ?? true),
+            certificateAvailable: Boolean(row.certificate_available ?? true),
+            frameType: row.frame_type || 'Unframed Gallery Canvas',
+            frameIncluded: Boolean(row.frame_included),
+            viewsCount: Number(row.views_count) || 0,
+            images: images.length > 0 ? images : [
+              {
+                id: `def-${row.id}`,
+                storagePath: '/hero-koi.jpg',
+                imageType: 'primary' as const,
+                altText: row.title,
+                sortOrder: 1,
+              }
+            ],
+            createdAt: row.created_at || new Date().toISOString(),
+            updatedAt: row.updated_at || new Date().toISOString(),
+          };
+        });
+
+        saveLocalArtworks(liveArtworks);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('dhruvi_artworks_updated', { detail: { count: liveArtworks.length } }));
+        }
+        return { artworks: liveArtworks, categories };
+      }
+
+      // If Supabase table exists but is empty, seed mock items automatically
+      const local = getLocalArtworks();
+      if (local && local.length > 0) {
+        // Sync local items to Supabase in background
+        Promise.all(local.map(a => this.syncArtworkToSupabase(a))).catch(e => console.warn('Auto-seed error:', e));
+      }
+
+      return { artworks: local, categories };
+    } catch (err) {
+      console.error('Supabase live fetch error:', err);
+      return { artworks: getLocalArtworks(), categories: getLocalCategories() };
+    }
+  },
+
   // Get Artworks with Filters and Pagination
   getArtworks(options: ArtworkFilterOptions = {}) {
     let artworks = getLocalArtworks();

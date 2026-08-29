@@ -4,6 +4,7 @@ import { CartProvider } from './context/CartContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { CartDrawer } from './components/cart/CartDrawer';
+import { useArtworksSync } from './utils/useArtworksSync';
 
 // Pages
 import { Home } from './pages/Home';
@@ -94,6 +95,8 @@ const ImageProtection = () => {
 };
 
 export const App: React.FC = () => {
+  useArtworksSync();
+
   return (
     <CartProvider>
       <Router>

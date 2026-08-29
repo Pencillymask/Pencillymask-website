@@ -16,8 +16,10 @@ import { useCart } from '../context/CartContext';
 import { ImageLightbox } from '../components/artwork/ImageLightbox';
 import { ArtworkCard } from '../components/artwork/ArtworkCard';
 import { SEO } from '../components/layout/SEO';
+import { useArtworksSync } from '../utils/useArtworksSync';
 
 export const ArtworkDetail: React.FC = () => {
+  useArtworksSync();
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { addToCart, isInCart } = useCart();

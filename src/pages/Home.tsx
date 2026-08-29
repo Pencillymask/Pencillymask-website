@@ -6,8 +6,10 @@ import { artworkService } from '../services/artworkService';
 import { whatsappService } from '../services/whatsappService';
 import { ArtworkCard } from '../components/artwork/ArtworkCard';
 import { SEO } from '../components/layout/SEO';
+import { useArtworksSync } from '../utils/useArtworksSync';
 
 export const Home: React.FC = () => {
+  useArtworksSync();
   const featuredArtworks = artworkService.getFeaturedArtworks(6);
   const categories = artworkService.getCategories();
 

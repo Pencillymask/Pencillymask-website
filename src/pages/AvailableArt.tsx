@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { artworkService } from '../services/artworkService';
 import { ArtworkGrid } from '../components/artwork/ArtworkGrid';
 import { SEO } from '../components/layout/SEO';
+import { useArtworksSync } from '../utils/useArtworksSync';
 
 export const AvailableArt: React.FC = () => {
+  useArtworksSync();
   const [page, setPage] = useState(1);
 
   const { artworks, totalPages, currentPage } = artworkService.getArtworks({

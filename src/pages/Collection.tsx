@@ -4,8 +4,10 @@ import { artworkService, ArtworkFilterOptions } from '../services/artworkService
 import { ArtworkFilter } from '../components/artwork/ArtworkFilter';
 import { ArtworkGrid } from '../components/artwork/ArtworkGrid';
 import { SEO } from '../components/layout/SEO';
+import { useArtworksSync } from '../utils/useArtworksSync';
 
 export const Collection: React.FC = () => {
+  useArtworksSync();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialCategory = searchParams.get('category') || 'all';
