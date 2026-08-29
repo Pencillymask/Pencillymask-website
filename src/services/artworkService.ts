@@ -386,49 +386,58 @@ export const artworkService = {
   // Admin: Save / Create Artwork (Synchronous + Async Supabase sync)
   saveArtwork(newArtworkData: Partial<Artwork>): Artwork {
     const artworks = getLocalArtworks();
-    const existingIndex = artworks.findIndex(a => a.id === newArtworkData.id);
+    const isEditing = Boolean(newArtworkData.id);
+    const existingIndex = isEditing ? artworks.findIndex(a => a.id === newArtworkData.id) : -1;
+    const existingArt = existingIndex >= 0 ? artworks[existingIndex] : null;
 
-    const isUUID = newArtworkData.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(newArtworkData.id);
-    const artworkId = isUUID ? newArtworkData.id! : 'a' + Date.now().toString(16).padStart(31, '0').slice(0, 31);
+    // Use exact existing ID if editing, otherwise generate a clean UUID or ID
+    const artworkId = newArtworkData.id || (
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : 'a' + Date.now().toString(16).padStart(31, '0').slice(0, 31)
+    );
 
-    // Compute unique base slug
-    const rawSlug = (newArtworkData.slug || newArtworkData.title || 'painting')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'painting';
+    // Compute or preserve unique slug
+    let slug = existingArt?.slug;
+    if (!slug || (newArtworkData.title && newArtworkData.title !== existingArt?.title)) {
+      const rawSlug = (newArtworkData.slug || newArtworkData.title || 'painting')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'painting';
 
-    let slug = rawSlug;
-    let counter = 1;
-    while (artworks.some(a => a.slug === slug && a.id !== artworkId)) {
-      counter++;
-      slug = `${rawSlug}-${counter}`;
+      slug = rawSlug;
+      let counter = 1;
+      while (artworks.some(a => a.slug === slug && a.id !== artworkId)) {
+        counter++;
+        slug = `${rawSlug}-${counter}`;
+      }
     }
 
     const fullArtwork: Artwork = {
       id: artworkId,
-      title: newArtworkData.title!,
+      title: newArtworkData.title || existingArt?.title || 'Untitled Artwork',
       slug,
-      description: newArtworkData.description || '',
-      price: newArtworkData.price || 0,
+      description: newArtworkData.description !== undefined ? newArtworkData.description : (existingArt?.description || ''),
+      price: newArtworkData.price !== undefined ? Number(newArtworkData.price) : (existingArt?.price || 0),
       currency: 'INR',
-      medium: newArtworkData.medium || 'Oil on Canvas',
-      width: newArtworkData.width || 36,
-      height: newArtworkData.height || 48,
-      depth: newArtworkData.depth || 1.5,
-      year: newArtworkData.year || new Date().getFullYear(),
-      categoryId: newArtworkData.categoryId || 'c1000000-0000-0000-0000-000000000001',
-      categoryName: newArtworkData.categoryName || 'Oil on Canvas',
-      categorySlug: newArtworkData.categorySlug || 'oil-on-canvas',
-      subCategoryId: newArtworkData.subCategoryId || null,
-      subCategoryName: newArtworkData.subCategoryName || undefined,
-      subCategorySlug: newArtworkData.subCategorySlug || undefined,
-      status: newArtworkData.status || 'available',
-      featured: newArtworkData.featured || false,
+      medium: newArtworkData.medium || existingArt?.medium || 'Oil on Canvas',
+      width: newArtworkData.width !== undefined ? Number(newArtworkData.width) : (existingArt?.width || 36),
+      height: newArtworkData.height !== undefined ? Number(newArtworkData.height) : (existingArt?.height || 48),
+      depth: newArtworkData.depth !== undefined ? Number(newArtworkData.depth) : (existingArt?.depth || 1.5),
+      year: newArtworkData.year !== undefined ? Number(newArtworkData.year) : (existingArt?.year || new Date().getFullYear()),
+      categoryId: newArtworkData.categoryId || existingArt?.categoryId || 'c1000000-0000-0000-0000-000000000001',
+      categoryName: newArtworkData.categoryName || existingArt?.categoryName || 'Oil on Canvas',
+      categorySlug: newArtworkData.categorySlug || existingArt?.categorySlug || 'oil-on-canvas',
+      subCategoryId: newArtworkData.subCategoryId !== undefined ? newArtworkData.subCategoryId : (existingArt?.subCategoryId || null),
+      subCategoryName: newArtworkData.subCategoryName || existingArt?.subCategoryName || undefined,
+      subCategorySlug: newArtworkData.subCategorySlug || existingArt?.subCategorySlug || undefined,
+      status: newArtworkData.status || existingArt?.status || 'available',
+      featured: newArtworkData.featured !== undefined ? Boolean(newArtworkData.featured) : (existingArt?.featured || false),
       signed: true,
       certificateAvailable: true,
-      frameType: newArtworkData.frameType || 'Unframed Gallery Paper',
-      frameIncluded: newArtworkData.frameIncluded || false,
-      images: newArtworkData.images || [
+      frameType: newArtworkData.frameType || existingArt?.frameType || 'Unframed Gallery Paper',
+      frameIncluded: newArtworkData.frameIncluded !== undefined ? Boolean(newArtworkData.frameIncluded) : (existingArt?.frameIncluded || false),
+      images: newArtworkData.images && newArtworkData.images.length > 0 ? newArtworkData.images : (existingArt?.images || [
         {
           id: `img-${Date.now()}`,
           storagePath: '/hero-koi.jpg',
@@ -436,8 +445,8 @@ export const artworkService = {
           altText: newArtworkData.title || 'Artwork Front View',
           sortOrder: 1,
         }
-      ],
-      createdAt: newArtworkData.createdAt || new Date().toISOString(),
+      ]),
+      createdAt: existingArt?.createdAt || newArtworkData.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -456,12 +465,10 @@ export const artworkService = {
     if (!isSupabaseConfigured || !supabase) return;
 
     try {
-      let activeSlug = artwork.slug;
-
-      const buildUpsertPayload = (slugValue: string) => ({
+      const buildUpsertPayload = {
         id: artwork.id,
         title: artwork.title,
-        slug: slugValue,
+        slug: artwork.slug,
         description: artwork.description,
         price: artwork.price,
         currency: artwork.currency,
@@ -480,24 +487,14 @@ export const artworkService = {
         frame_included: artwork.frameIncluded,
         created_at: artwork.createdAt || new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      });
+      };
 
-      let { error: artworkError } = await supabase
+      const { error: artworkError } = await supabase
         .from('artworks')
-        .upsert(buildUpsertPayload(activeSlug));
-
-      // Handle duplicate slug unique constraint violation automatically
-      if (artworkError && artworkError.message.includes('artworks_slug_key')) {
-        console.warn('Slug collision on Supabase, appending timestamp suffix and retrying...');
-        activeSlug = `${artwork.slug}-${Date.now().toString(36).slice(-4)}`;
-        const retryRes = await supabase
-          .from('artworks')
-          .upsert(buildUpsertPayload(activeSlug));
-        artworkError = retryRes.error;
-      }
+        .upsert(buildUpsertPayload, { onConflict: 'id' });
 
       if (artworkError) {
-        console.error('Error inserting artwork to Supabase:', artworkError.message);
+        console.error('Error updating artwork in Supabase:', artworkError.message);
         return;
       }
 
@@ -507,16 +504,10 @@ export const artworkService = {
           await supabase.from('artwork_categories').upsert({
             artwork_id: artwork.id,
             category_id: artwork.categoryId,
-          });
-        }
-        if (artwork.subCategoryId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(artwork.subCategoryId)) {
-          await supabase.from('artwork_categories').upsert({
-            artwork_id: artwork.id,
-            category_id: artwork.subCategoryId,
-          });
+          }, { onConflict: 'artwork_id,category_id' });
         }
       } catch (junctionErr) {
-        console.warn('artwork_categories junction sync notice (check RLS policy if needed):', junctionErr);
+        console.warn('artwork_categories sync notice:', junctionErr);
       }
 
       if (artwork.images && artwork.images.length > 0) {
@@ -527,10 +518,9 @@ export const artworkService = {
           const img = artwork.images[idx];
           const isUUID = img.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(img.id);
 
-          // Deterministic UUID for images based on artwork ID and image index
           const imgUUID = isUUID
             ? img.id
-            : `f0000000-0000-0000-0000-${artwork.id.slice(-10)}${String(idx + 1).padStart(2, '0')}`;
+            : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `f0000000-0000-0000-0000-${artwork.id.replace(/[^0-9a-f]/gi, '').slice(-10)}${String(idx + 1).padStart(2, '0')}`);
 
           await supabase.from('artwork_images').upsert({
             id: imgUUID,
@@ -540,11 +530,11 @@ export const artworkService = {
             alt_text: img.altText || artwork.title,
             sort_order: img.sortOrder || (idx + 1),
             created_at: new Date().toISOString(),
-          });
+          }, { onConflict: 'id' });
         }
       }
     } catch (err) {
-      console.error('Unexpected Supabase insertion exception:', err);
+      console.error('Unexpected Supabase upsert exception:', err);
     }
   },
 
