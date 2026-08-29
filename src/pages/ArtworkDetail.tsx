@@ -7,8 +7,7 @@ import {
   Award,
   ShieldCheck,
   Share2,
-  ChevronLeft,
-  Sparkles
+  ChevronLeft
 } from 'lucide-react';
 import { artworkService } from '../services/artworkService';
 import { whatsappService } from '../services/whatsappService';

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MessageCircle, Award, Palette, ShieldCheck, ChevronDown, Sparkles, Compass, User } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
