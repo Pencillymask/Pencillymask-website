@@ -1,0 +1,34 @@
+[
+  {
+    "id": "a2000000-0000-0000-0000-000000000001",
+    "title": "Golden Harmony - Koi Fish",
+    "slug": "golden-harmony-koi-fish",
+    "description": "Original fine art painting titled \"Golden Harmony - Koi Fish\". Created with meticulous layering, rich textural impasto, and subtle metallic undertones. Unique 1-of-1 original work signed by artist Dhruvi.",
+    "price": 85000,
+    "currency": "INR",
+    "medium": "Oil & 24K Gold Leaf on Belgian Linen Canvas",
+    "width": 36,
+    "height": 48,
+    "depth": 1.5,
+    "year": 2025,
+    "categoryId": "c1000000-0000-0000-0000-000000000001",
+    "categoryName": "Oil on Canvas",
+    "categorySlug": "oil-on-canvas",
+    "status": "available",
+    "featured": true,
+    "signed": true,
+    "certificateAvailable": true,
+    "frameType": "Floating Natural Oak Frame",
+    "frameIncluded": true,
+    "images": [
+      {
+        "id": "img-koi-1",
+        "storagePath": "/hero-koi.jpg",
+        "imageType": "primary",
+        "altText": "Golden Harmony - Koi Fish Front View",
+        "sortOrder": 1
+      }
+    ],
+    "createdAt": "2026-08-22T09:29:31.590Z"
+  }
+]

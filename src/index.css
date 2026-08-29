@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FAF8F5;
+    color: #181716;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF8F5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D5CFC5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C5A059;
+}
+
+/* Image Aspect Ratio & Frame Effect */
+.art-frame-border {
+  box-shadow: 0 0 0 1px rgba(24, 23, 22, 0.08), 0 20px 40px -15px rgba(24, 23, 22, 0.15);
+}
+
+.gold-border-glow {
+  box-shadow: 0 0 0 1px rgba(197, 160, 89, 0.4), 0 10px 25px -5px rgba(197, 160, 89, 0.2);
+}
+
+/* Global Image Protection (Anti-Copy & Anti-Download) */
+img {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  -khtml-user-drag: none !important;
+  -moz-user-drag: none !important;
+  -o-user-drag: none !important;
+}
+
+/* Transparent Image Shield Layer */
+.image-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: transparent;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Anti-Print & Screen Capture Deterrent Rules */
+@media print {
+  html, body, #root {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
+/* Subtle Provenance Watermark Overlay for Paintings */
+.art-watermark-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.03) 25px,
+    transparent 25px,
+    transparent 50px
+  );
+}

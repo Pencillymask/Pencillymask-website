@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /collection
+Allow: /artwork/
+Allow: /available-art
+Allow: /sold-art
+Allow: /about
+Allow: /contact
+Allow: /hero-koi.jpg
+Allow: /artist-dhruvi.jpeg
+Allow: /logo.png
+
+# Disallow private admin routes
+Disallow: /admin
+Disallow: /admin/*
+
+Sitemap: https://dhruvisportfolio.com/sitemap.xml
