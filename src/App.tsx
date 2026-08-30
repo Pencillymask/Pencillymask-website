@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { CartProvider } from './context/CartContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
@@ -126,6 +127,7 @@ export const App: React.FC = () => {
           <CartDrawer />
           <Footer />
         </div>
+        <Analytics />
       </Router>
     </CartProvider>
   );
