@@ -20,7 +20,7 @@ export const Collection: React.FC = () => {
     searchQuery: initialSearch,
     sortBy: 'newest',
     page: 1,
-    limit: 12,
+    limit: 16,
   });
 
   const categories = artworkService.getCategories();
@@ -46,7 +46,7 @@ export const Collection: React.FC = () => {
       searchQuery: '',
       sortBy: 'newest',
       page: 1,
-      limit: 12,
+      limit: 16,
     });
   };
 

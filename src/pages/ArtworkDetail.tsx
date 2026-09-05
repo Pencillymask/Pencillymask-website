@@ -132,11 +132,17 @@ export const ArtworkDetail: React.FC = () => {
         <div className="lg:col-span-7 space-y-4">
 
           {/* Featured Large Image Display */}
-          <div className="relative aspect-[4/5] bg-gallery-card/40 rounded-xl overflow-hidden border border-gallery-border/70 group shadow-gallery">
+          <div className="relative min-h-[380px] sm:min-h-[520px] max-h-[700px] w-full bg-gallery-card/40 rounded-xl overflow-hidden border border-gallery-border/70 group shadow-gallery flex items-center justify-center p-4 sm:p-6">
+            {/* Ambient backdrop glow for mood/depth */}
+            <div
+              className="absolute inset-0 bg-cover bg-center blur-2xl opacity-15 scale-110 pointer-events-none"
+              style={{ backgroundImage: `url(${currentImage.storagePath})` }}
+            />
+
             <img
               src={currentImage.storagePath}
               alt={currentImage.altText || artwork.title}
-              className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-102 cursor-pointer"
+              className="relative z-1 max-w-full max-h-[500px] sm:max-h-[640px] w-auto h-auto object-contain rounded-lg shadow-md transition-transform duration-500 group-hover:scale-[1.01] cursor-pointer"
               onClick={() => setShowLightbox(true)}
             />
 
@@ -167,7 +173,7 @@ export const ArtworkDetail: React.FC = () => {
                 <button
                   key={img.id || idx}
                   onClick={() => setSelectedImageIndex(idx)}
-                  className={`relative w-20 h-24 rounded-md overflow-hidden border-2 transition-all flex-shrink-0 ${selectedImageIndex === idx ? 'border-gallery-gold scale-105 shadow-md' : 'border-gallery-border opacity-70 hover:opacity-100'
+                  className={`relative w-20 h-20 rounded-md overflow-hidden border-2 transition-all flex-shrink-0 ${selectedImageIndex === idx ? 'border-gallery-gold scale-105 shadow-md' : 'border-gallery-border opacity-70 hover:opacity-100'
                     }`}
                 >
                   <img src={img.storagePath} alt={img.altText} className="w-full h-full object-cover" />

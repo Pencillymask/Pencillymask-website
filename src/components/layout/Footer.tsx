@@ -102,17 +102,17 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-sm text-gallery-bg/70">
               <li>
                 <Link to="/collection" className="hover:text-gallery-gold transition-colors">
-                  Complete Artwork Collection
+                  Artwork Collection
                 </Link>
               </li>
               <li>
                 <Link to="/available-art" className="hover:text-gallery-gold transition-colors">
-                  Available Original Paintings
+                  Available Paintings
                 </Link>
               </li>
               <li>
                 <Link to="/sold-art" className="hover:text-gallery-gold transition-colors">
-                  Sold Artwork Provenance
+                  Sold Artwork
                 </Link>
               </li>
             </ul>
@@ -124,7 +124,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-sm text-gallery-bg/70">
               <li>
                 <Link to="/about" className="hover:text-gallery-gold transition-colors">
-                  About Artist Biography
+                  About Artist
                 </Link>
               </li>
               <li>
@@ -132,11 +132,7 @@ export const Footer: React.FC = () => {
                   Commissions & Inquiries
                 </Link>
               </li>
-              <li>
-                <Link to="/admin" className="hover:text-gallery-gold transition-colors">
-                  Admin Dashboard Portal
-                </Link>
-              </li>
+
             </ul>
           </div>
 
@@ -189,7 +185,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gallery-bg/50">
-          <p>© {new Date().getFullYear()} pencillymask — Dhruvi's Art Studio. All Rights Reserved. Original Artwork 1-of-1 Collection.</p>
+          <p>© {new Date().getFullYear()} pencillymask — Dhruvi's Art Studio. All Rights Reserved.</p>
           <p className="mt-2 sm:mt-0 tracking-wider">Developed by Nandan Gogari</p>
         </div>
       </div>

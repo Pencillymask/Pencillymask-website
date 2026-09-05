@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, MessageCircle, Award, Palette, ShieldCheck, ChevronDown, Sparkles, Compass, User } from 'lucide-react';
+import { ArrowRight, MessageCircle, Award, ShieldCheck, ChevronDown, Sparkles, Compass, User } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { artworkService } from '../services/artworkService';
 import { whatsappService } from '../services/whatsappService';
@@ -10,7 +10,7 @@ import { useArtworksSync } from '../utils/useArtworksSync';
 
 export const Home: React.FC = () => {
   useArtworksSync();
-  const featuredArtworks = artworkService.getFeaturedArtworks(6);
+  const featuredArtworks = artworkService.getFeaturedArtworks(9);
   const categories = artworkService.getCategories();
 
   const whatsappNumber = whatsappService.getPhoneNumber();
@@ -191,18 +191,14 @@ export const Home: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 p-8 bg-gallery-card/60 rounded-xl border border-gallery-border/70 text-center shadow-gallery backdrop-blur-xs"
+              className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8 p-8 bg-gallery-card/60 rounded-xl border border-gallery-border/70 text-center shadow-gallery backdrop-blur-xs"
             >
               <div className="space-y-2 p-4">
                 <Award className="w-8 h-8 text-gallery-gold mx-auto" />
                 <h3 className="font-serif text-lg text-gallery-dark font-medium">100% Original Paintings</h3>
                 <p className="text-xs text-gallery-muted">Every piece is an authentic 1-of-1 original work created in studio.</p>
               </div>
-              <div className="space-y-2 p-4 border-y md:border-y-0 md:border-x border-gallery-border">
-                <Palette className="w-8 h-8 text-gallery-gold mx-auto" />
-                <h3 className="font-serif text-lg text-gallery-dark font-medium">Archival Quality Materials</h3>
-                <p className="text-xs text-gallery-muted">Belgian linen, lightfast oil pigments, and genuine 24K gold leaf accents.</p>
-              </div>
+
               <div className="space-y-2 p-4">
                 <ShieldCheck className="w-8 h-8 text-gallery-gold mx-auto" />
                 <h3 className="font-serif text-lg text-gallery-dark font-medium">Insured White-Glove Shipping</h3>

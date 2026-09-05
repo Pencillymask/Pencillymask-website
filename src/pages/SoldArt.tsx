@@ -11,7 +11,7 @@ export const SoldArt: React.FC = () => {
   const { artworks, totalPages, currentPage } = artworkService.getArtworks({
     status: 'sold',
     page,
-    limit: 12,
+    limit: 16,
   });
 
   return (

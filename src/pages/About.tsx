@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Award, Sparkles, MapPin, HeartHandshake } from 'lucide-react';
+import { Sparkles, MapPin } from 'lucide-react';
 import { SEO } from '../components/layout/SEO';
 
 export const About: React.FC = () => {
@@ -103,32 +103,6 @@ export const About: React.FC = () => {
               Inquire Commission
             </Link>
           </div>
-        </div>
-      </div>
-
-      {/* Solo & Group Exhibition Timeline */}
-      <div className="space-y-6 pt-12 border-t border-gallery-border">
-        <div className="text-center space-y-2 max-w-xl mx-auto">
-          <Award className="w-8 h-8 text-gallery-gold mx-auto" />
-          <h2 className="font-serif text-3xl text-gallery-dark">Selected Exhibitions</h2>
-          <p className="text-xs text-gallery-muted">Solo shows and curated group fine art exhibitions.</p>
-        </div>
-
-        <div className="max-w-3xl mx-auto space-y-4">
-          {[
-            { year: '2026', title: 'Lumina: Reflections in Texture & Gold', location: 'Jahangir Art Gallery, Mumbai' },
-            { year: '2025', title: 'Earth & Atmosphere Contemporary Showcase', location: 'Fine Arts Guild, New Delhi' },
-            { year: '2024', title: 'Silence & Solitude: Oil Impasto Series', location: 'India Art Fair Contemporary Wing' },
-          ].map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between p-4 bg-white border border-gallery-border rounded-lg shadow-xs">
-              <div>
-                <span className="text-xs font-mono text-gallery-gold font-bold uppercase tracking-wider">{item.year}</span>
-                <h4 className="font-serif text-base text-gallery-dark font-medium">{item.title}</h4>
-                <p className="text-xs text-gallery-muted">{item.location}</p>
-              </div>
-              <HeartHandshake className="w-5 h-5 text-gallery-muted/60" />
-            </div>
-          ))}
         </div>
       </div>
     </div>
